@@ -1,0 +1,365 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id          Int      @id @default(autoincrement())
+  name        String
+  nameEn      String?
+  address     String?
+  phone       String?
+  email       String?
+  taxNumber   String?
+  logo        String?
+  defaultCurrency String @default("USD")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+  warehouses  Warehouse[]
+  products    Product[]
+  customers   Customer[]
+  suppliers   Supplier[]
+  accounts    Account[]
+  projects    Project[]
+  employees   Employee[]
+  costCenters CostCenter[]
+  journalEntries JournalEntry[]
+  purchaseOrders PurchaseOrder[]
+  salesOrders  SalesOrder[]
+  currencies  Currency[]
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String
+  name      String
+  password  String
+  role      String   @default("user")
+  isActive  Boolean  @default(true)
+  locale    String   @default("ar")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  companyId Int
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([email, companyId])
+}
+
+model Currency {
+  id       Int     @id @default(autoincrement())
+  code     String
+  name     String
+  nameAr   String?
+  symbol   String
+  rate     Float   @default(1)
+  isDefault Boolean @default(false)
+  isActive  Boolean @default(true)
+
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([code, companyId])
+}
+
+model Warehouse {
+  id       Int    @id @default(autoincrement())
+  name     String
+  nameEn   String?
+  code     String
+  location String?
+  isActive Boolean @default(true)
+
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  stockItems Stock[]
+
+  @@unique([code, companyId])
+}
+
+model Product {
+  id          Int     @id @default(autoincrement())
+  sku         String
+  name        String
+  nameEn      String?
+  description String?
+  category    String?
+  unit        String  @default("piece")
+  costPrice   Float   @default(0)
+  salePrice   Float   @default(0)
+  isActive    Boolean @default(true)
+  isService   Boolean @default(false)
+  isRawMaterial Boolean @default(false)
+  barcode     String?
+  minStock    Float   @default(0)
+  maxStock    Float   @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  companyId   Int
+  company     Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  stockItems  Stock[]
+  purchaseItems PurchaseOrderItem[]
+  salesItems  SalesOrderItem[]
+
+  @@unique([sku, companyId])
+}
+
+model Stock {
+  id        Int   @id @default(autoincrement())
+  quantity  Float @default(0)
+  reserved  Float @default(0)
+  avgCost   Float @default(0)
+
+  productId   Int
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouseId Int
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, warehouseId])
+}
+
+model Customer {
+  id        Int     @id @default(autoincrement())
+  name      String
+  nameEn    String?
+  code      String?
+  email     String?
+  phone     String?
+  address   String?
+  taxNumber String?
+  creditLimit Float @default(0)
+  balance   Float   @default(0)
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  salesOrders SalesOrder[]
+
+  @@unique([name, companyId])
+}
+
+model Supplier {
+  id        Int     @id @default(autoincrement())
+  name      String
+  nameEn    String?
+  code      String?
+  email     String?
+  phone     String?
+  address   String?
+  taxNumber String?
+  creditLimit Float @default(0)
+  balance   Float   @default(0)
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  purchaseOrders PurchaseOrder[]
+
+  @@unique([name, companyId])
+}
+
+model Account {
+  id          Int     @id @default(autoincrement())
+  code        String
+  name        String
+  nameEn      String?
+  type        String  // asset, liability, equity, revenue, expense
+  parentId    Int?
+  parent      Account? @relation("AccountParent", fields: [parentId], references: [id])
+  children    Account[] @relation("AccountParent")
+  isActive    Boolean @default(true)
+  level       Int     @default(1)
+  balance     Float   @default(0)
+  createdAt   DateTime @default(now())
+
+  companyId   Int
+  company     Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  journalItems  JournalEntryItem[]
+
+  @@unique([code, companyId])
+}
+
+model JournalEntry {
+  id          Int     @id @default(autoincrement())
+  entryNumber String
+  date        DateTime @default(now())
+  reference   String?
+  description String
+  totalDebit  Float   @default(0)
+  totalCredit Float   @default(0)
+  isPosted    Boolean @default(false)
+  voucherType String  // payment, receipt, journal, transfer
+  createdAt   DateTime @default(now())
+
+  companyId   Int
+  company     Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  items       JournalEntryItem[]
+}
+
+model JournalEntryItem {
+  id        Int   @id @default(autoincrement())
+  debit     Float @default(0)
+  credit    Float @default(0)
+  description String?
+
+  entryId   Int
+  entry     JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  accountId Int
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  costCenterId Int?
+  costCenter   CostCenter? @relation(fields: [costCenterId], references: [id])
+
+  projectId    Int?
+  project      Project?    @relation(fields: [projectId], references: [id])
+}
+
+model CostCenter {
+  id        Int     @id @default(autoincrement())
+  code      String
+  name      String
+  nameEn    String?
+  isActive  Boolean @default(true)
+
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  journalItems JournalEntryItem[]
+
+  @@unique([code, companyId])
+}
+
+model Project {
+  id          Int     @id @default(autoincrement())
+  code        String
+  name        String
+  nameEn      String?
+  description String?
+  status      String  @default("active") // active, completed, cancelled
+  startDate   DateTime?
+  endDate     DateTime?
+  budget      Float   @default(0)
+  actualCost  Float   @default(0)
+  progress    Float   @default(0)
+  isActive    Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  companyId   Int
+  company     Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  journalItems JournalEntryItem[]
+
+  @@unique([code, companyId])
+}
+
+model Employee {
+  id          Int     @id @default(autoincrement())
+  code        String
+  name        String
+  nameEn      String?
+  email       String?
+  phone       String?
+  department  String?
+  jobTitle    String?
+  hireDate    DateTime?
+  salary      Float   @default(0)
+  isActive    Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  companyId   Int
+  company     Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([code, companyId])
+}
+
+model PurchaseOrder {
+  id          Int     @id @default(autoincrement())
+  orderNumber String
+  date        DateTime @default(now())
+  status      String  @default("draft") // draft, approved, received, cancelled
+  total       Float   @default(0)
+  tax         Float   @default(0)
+  discount    Float   @default(0)
+  netTotal    Float   @default(0)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  companyId   Int
+  company     Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  supplierId  Int
+  supplier    Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  items       PurchaseOrderItem[]
+}
+
+model PurchaseOrderItem {
+  id          Int   @id @default(autoincrement())
+  quantity    Float
+  unitPrice   Float
+  total       Float
+  receivedQty Float @default(0)
+
+  orderId     Int
+  order       PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId   Int
+  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model SalesOrder {
+  id          Int     @id @default(autoincrement())
+  orderNumber String
+  date        DateTime @default(now())
+  status      String  @default("draft") // draft, approved, shipped, delivered, cancelled
+  total       Float   @default(0)
+  tax         Float   @default(0)
+  discount    Float   @default(0)
+  netTotal    Float   @default(0)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  companyId   Int
+  company     Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  customerId  Int
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  items       SalesOrderItem[]
+}
+
+model SalesOrderItem {
+  id          Int   @id @default(autoincrement())
+  quantity    Float
+  unitPrice   Float
+  total       Float
+  deliveredQty Float @default(0)
+
+  orderId     Int
+  order       SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId   Int
+  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
