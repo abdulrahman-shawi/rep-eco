@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -75,6 +75,7 @@ model Warehouse {
   code     String
   location String?
   isActive Boolean @default(true)
+  createdAt DateTime @default(now())
 
   companyId Int
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -178,7 +179,7 @@ model Account {
   code        String
   name        String
   nameEn      String?
-  type        String  // asset, liability, equity, revenue, expense
+  type        String
   parentId    Int?
   parent      Account? @relation("AccountParent", fields: [parentId], references: [id])
   children    Account[] @relation("AccountParent")
@@ -204,7 +205,7 @@ model JournalEntry {
   totalDebit  Float   @default(0)
   totalCredit Float   @default(0)
   isPosted    Boolean @default(false)
-  voucherType String  // payment, receipt, journal, transfer
+  voucherType String
   createdAt   DateTime @default(now())
 
   companyId   Int
@@ -238,6 +239,7 @@ model CostCenter {
   name      String
   nameEn    String?
   isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
 
   companyId Int
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -253,7 +255,7 @@ model Project {
   name        String
   nameEn      String?
   description String?
-  status      String  @default("active") // active, completed, cancelled
+  status      String  @default("active")
   startDate   DateTime?
   endDate     DateTime?
   budget      Float   @default(0)
@@ -296,7 +298,7 @@ model PurchaseOrder {
   id          Int     @id @default(autoincrement())
   orderNumber String
   date        DateTime @default(now())
-  status      String  @default("draft") // draft, approved, received, cancelled
+  status      String  @default("draft")
   total       Float   @default(0)
   tax         Float   @default(0)
   discount    Float   @default(0)
@@ -332,7 +334,7 @@ model SalesOrder {
   id          Int     @id @default(autoincrement())
   orderNumber String
   date        DateTime @default(now())
-  status      String  @default("draft") // draft, approved, shipped, delivered, cancelled
+  status      String  @default("draft")
   total       Float   @default(0)
   tax         Float   @default(0)
   discount    Float   @default(0)
